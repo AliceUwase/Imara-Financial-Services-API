@@ -1,0 +1,169 @@
+name: Classroom Autograding
+
+on:
+  push:
+    branches:
+      - f1/mvp
+      - f2/compliance-retrofit
+      - summative/release-hardening
+  workflow_dispatch:
+
+permissions:
+  checks: write
+  actions: read
+  contents: read
+
+jobs:
+  classroom-autograding:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Clone private autograde pack
+        env:
+          AUTOGRADE_REPO_TOKEN: ${{ secrets.AUTOGRADE_REPO_TOKEN }}
+        run: |
+          if [ -z "$AUTOGRADE_REPO_TOKEN" ]; then
+            echo "Missing AUTOGRADE_REPO_TOKEN secret"
+            exit 1
+          fi
+
+          git clone "https://x-access-token:${AUTOGRADE_REPO_TOKEN}@github.com/ALU-BSE/advanced-python-imara-autograde-private.git" .autograde-private
+
+      - name: F1 bootstrap and migrations
+        if: github.ref_name == 'f1/mvp'
+        id: f1-bootstrap
+        uses: github-education-resources/autograding-command-grader@v1
+        with:
+          test-name: F1 bootstrap and migrations
+          command: bash .autograde-private/scripts/run_f1.sh bootstrap
+          timeout: 20
+          max-score: 20
+
+      - name: F1 merchant API
+        if: github.ref_name == 'f1/mvp'
+        id: f1-merchant-api
+        uses: github-education-resources/autograding-command-grader@v1
+        with:
+          test-name: F1 merchant API
+          command: bash .autograde-private/scripts/run_f1.sh merchant_api
+          timeout: 20
+          max-score: 25
+
+      - name: F1 financing API
+        if: github.ref_name == 'f1/mvp'
+        id: f1-financing-api
+        uses: github-education-resources/autograding-command-grader@v1
+        with:
+          test-name: F1 financing API
+          command: bash .autograde-private/scripts/run_f1.sh financing_api
+          timeout: 20
+          max-score: 20
+
+      - name: F1 performance and async evidence
+        if: github.ref_name == 'f1/mvp'
+        id: f1-performance-and-async
+        uses: github-education-resources/autograding-command-grader@v1
+        with:
+          test-name: F1 performance and async evidence
+          command: bash .autograde-private/scripts/run_f1.sh performance_and_async
+          timeout: 10
+          max-score: 25
+
+      - name: F1 required artifacts
+        if: github.ref_name == 'f1/mvp'
+        id: f1-required-artifacts
+        uses: github-education-resources/autograding-command-grader@v1
+        with:
+          test-name: F1 required artifacts
+          command: bash .autograde-private/scripts/run_f1.sh artifacts
+          timeout: 5
+          max-score: 10
+
+      - name: F1 reporter
+        if: github.ref_name == 'f1/mvp'
+        uses: github-education-resources/autograding-grading-reporter@v1
+        env:
+          F1-BOOTSTRAP_RESULTS: "${{ steps.f1-bootstrap.outputs.result }}"
+          F1-MERCHANT-API_RESULTS: "${{ steps.f1-merchant-api.outputs.result }}"
+          F1-FINANCING-API_RESULTS: "${{ steps.f1-financing-api.outputs.result }}"
+          F1-PERFORMANCE-AND-ASYNC_RESULTS: "${{ steps.f1-performance-and-async.outputs.result }}"
+          F1-REQUIRED-ARTIFACTS_RESULTS: "${{ steps.f1-required-artifacts.outputs.result }}"
+        with:
+          runners: f1-bootstrap,f1-merchant-api,f1-financing-api,f1-performance-and-async,f1-required-artifacts
+
+      - name: F2 F1 regression preservation
+        if: github.ref_name == 'f2/compliance-retrofit'
+        id: f2-f1-regression-preservation
+        uses: github-education-resources/autograding-command-grader@v1
+        with:
+          test-name: F2 F1 regression preservation
+          command: bash .autograde-private/scripts/run_f2.sh f1_regression
+          timeout: 20
+          max-score: 15
+
+      - name: F2 authentication and RBAC
+        if: github.ref_name == 'f2/compliance-retrofit'
+        id: f2-authentication-and-rbac
+        uses: github-education-resources/autograding-command-grader@v1
+        with:
+          test-name: F2 authentication and RBAC
+          command: bash .autograde-private/scripts/run_f2.sh auth_and_rbac
+          timeout: 20
+          max-score: 55
+
+      - name: F2 privacy and required artifacts
+        if: github.ref_name == 'f2/compliance-retrofit'
+        id: f2-privacy-and-required-artifacts
+        uses: github-education-resources/autograding-command-grader@v1
+        with:
+          test-name: F2 privacy and required artifacts
+          command: bash .autograde-private/scripts/run_f2.sh privacy_and_artifacts
+          timeout: 10
+          max-score: 30
+
+      - name: F2 reporter
+        if: github.ref_name == 'f2/compliance-retrofit'
+        uses: github-education-resources/autograding-grading-reporter@v1
+        env:
+          F2-F1-REGRESSION-PRESERVATION_RESULTS: "${{ steps.f2-f1-regression-preservation.outputs.result }}"
+          F2-AUTHENTICATION-AND-RBAC_RESULTS: "${{ steps.f2-authentication-and-rbac.outputs.result }}"
+          F2-PRIVACY-AND-REQUIRED-ARTIFACTS_RESULTS: "${{ steps.f2-privacy-and-required-artifacts.outputs.result }}"
+        with:
+          runners: f2-f1-regression-preservation,f2-authentication-and-rbac,f2-privacy-and-required-artifacts
+
+      - name: Summative regression and student tests
+        if: github.ref_name == 'summative/release-hardening'
+        id: summative-regression-and-student-tests
+        uses: github-education-resources/autograding-command-grader@v1
+        with:
+          test-name: Summative regression and student tests
+          command: bash .autograde-private/scripts/run_summative.sh regression_and_student_tests
+          timeout: 30
+          max-score: 60
+
+      - name: Summative deployment and readiness
+        if: github.ref_name == 'summative/release-hardening'
+        id: summative-deployment-and-readiness
+        uses: github-education-resources/autograding-command-grader@v1
+        with:
+          test-name: Summative deployment and readiness
+          command: bash .autograde-private/scripts/run_summative.sh deployment_and_readiness
+          timeout: 15
+          max-score: 40
+
+      - name: Summative reporter
+        if: github.ref_name == 'summative/release-hardening'
+        uses: github-education-resources/autograding-grading-reporter@v1
+        env:
+          SUMMATIVE-REGRESSION-AND-STUDENT-TESTS_RESULTS: "${{ steps.summative-regression-and-student-tests.outputs.result }}"
+          SUMMATIVE-DEPLOYMENT-AND-READINESS_RESULTS: "${{ steps.summative-deployment-and-readiness.outputs.result }}"
+        with:
+          runners: summative-regression-and-student-tests,summative-deployment-and-readiness

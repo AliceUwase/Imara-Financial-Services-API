@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  repo-hygiene:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required starter files
+        run: |
+          test -f README.md
+          test -f .env.example
+          test -f requirements.txt
+          test -f .github/pull_request_template.md
+
+      - name: Reject prebuilt Django bootstrap in template source repo
+        if: github.repository == 'ALU-BSE/advanced-python-imara-template'
+        run: |
+          test ! -f manage.py
+          test ! -d config
+          test ! -d apps
+
+      - name: Validate pull request source branch name
+        if: github.event_name == 'pull_request'
+        run: |
+          case "${{ github.head_ref }}" in
+            f1/mvp|f2/compliance-retrofit|summative/release-hardening)
+              echo "Allowed assessment branch"
+              ;;
+            *)
+              echo "PR source branch must be one of: f1/mvp, f2/compliance-retrofit, summative/release-hardening"
+              exit 1
+              ;;
+          esac
