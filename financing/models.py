@@ -39,3 +39,47 @@ class FinancingRequest(models.Model):
 
     def __str__(self) -> str:
         return f'{self.merchant.business_name} — {self.amount} {self.currency}'
+
+class AlertAttempt(models.Model):
+    """Records each attempt to send an alert about a financing request.
+
+    The model exists to provide auditable evidence that alerts were
+    queued and processed, regardless of whether the underlying send
+    succeeded. Every Celery task invocation should write a row here.
+    """
+
+    class Status(models.TextChoices):
+        QUEUED = 'queued', 'Queued'
+        SUCCEEDED = 'succeeded', 'Succeeded'
+        FAILED = 'failed', 'Failed'
+
+    class Channel(models.TextChoices):
+        EMAIL = 'email', 'Email'
+        SMS = 'sms', 'SMS'
+        WEBHOOK = 'webhook', 'Webhook'
+        LOG = 'log', 'Log'
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+    financing_request = models.ForeignKey(
+        'FinancingRequest',
+        on_delete=models.CASCADE,
+        related_name='alert_attempts',
+    )
+    channel = models.CharField(max_length=20, choices=Channel.choices)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.QUEUED,
+    )
+    error_message = models.TextField(blank=True, default='')
+    attempted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-attempted_at']
+
+    def __str__(self) -> str:
+        return f'{self.channel} alert for {self.financing_request_id} ({self.status})'
