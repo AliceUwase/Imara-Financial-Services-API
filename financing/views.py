@@ -2,11 +2,16 @@
 
 Merchant-facing CRUD on financing requests is gated by IsMerchant.
 Lender-facing listing is gated by IsLender.Creation and updates dispatch an async alert via Celery so the API
-response is not blocked by alert delivery"""
+response is not blocked by alert delivery.
+
+The lender-facing list view uses cursor pagination tuned for
+low-bandwidth contexts: small page size, opaque cursor.
+"""
 
 from django.db import transaction
 from rest_framework import generics, viewsets
 
+from common.pagination import FinancingRequestCursorPagination
 from common.permissions import IsLender, IsMerchant
 
 from .models import FinancingRequest
@@ -36,9 +41,15 @@ class FinancingRequestViewSet(viewsets.ModelViewSet):
             lambda: send_financing_alert.delay(str(instance.id), event='updated')
         )
 
+
 class LenderFinancingRequestListView(generics.ListAPIView):
-    """Lender-facing read-only list of submitted financing requests."""
+    """Lender-facing read-only list of submitted financing requests.
+
+    Uses cursor pagination so lenders on unstable mobile data fetch
+    small, predictable pages. 
+    """
 
     serializer_class = FinancingRequestSerializer
     queryset = FinancingRequest.objects.filter(status='submitted')
     permission_classes = [IsLender]
+    pagination_class = FinancingRequestCursorPagination
