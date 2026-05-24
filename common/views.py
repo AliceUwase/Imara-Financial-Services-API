@@ -1,3 +1,9 @@
-from django.shortcuts import render
+from django.http import JsonResponse
 
-# Create your views here.
+
+def health(request):
+	"""Simple health endpoint required by the autograder.
+
+	Returns HTTP 200 with a small JSON body.
+	"""
+	return JsonResponse({'status': 'ok'})

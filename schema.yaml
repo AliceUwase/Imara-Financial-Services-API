@@ -1,0 +1,70 @@
+openapi: 3.0.3
+info:
+  title: Imara Financial Services API
+  version: 1.0.0
+  description: Merchant onboarding and financing requests MVP.
+paths:
+  /api/financing/requests/:
+    get:
+      operationId: financing_requests_retrieve
+      tags:
+      - financing
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: financing_requests_create
+      tags:
+      - financing
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/merchants/:
+    post:
+      operationId: merchants_create
+      tags:
+      - merchants
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/merchants/{id}/:
+    get:
+      operationId: merchants_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - merchants
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

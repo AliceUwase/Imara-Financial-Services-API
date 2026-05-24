@@ -1,8 +1,6 @@
 """Root URL configuration for the Imara project.
 
-API endpoints are mounted under /api/v1/. Each domain app contributes
-its own URL patterns through include(). The schema endpoints publish
-the OpenAPI document and a Swagger UI for interactive exploration.
+
 """
 
 from django.contrib import admin
@@ -12,16 +10,18 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from common.views import health
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # API v1 — domain endpoints
-    path('api/v1/', include('merchants.urls')),
-    path('api/v1/', include('financing.urls')),
-    path('api/v1/', include('common.urls')),
+    # API endpoints
+    path('api/health/', health, name='health'),
+    path('api/merchants/', include('merchants.urls')),
+    path('api/financing/requests/', include('financing.urls')),
 
-    # API schema and interactive docs
+    # API schema 
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path(
         'api/schema/swagger-ui/',

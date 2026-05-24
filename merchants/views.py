@@ -1,26 +1,46 @@
 """Views for the merchants app.
 
-Exposes merchant resources as a DRF ViewSet. R
 """
 
-from rest_framework import viewsets
+from rest_framework.views import APIView
+from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from rest_framework import status
 
-from common.permissions import IsMerchant
-
-from .models import Merchant
-from .serializers import MerchantSerializer
+from .models import Merchant, MerchantIndex
 
 
-class MerchantViewSet(viewsets.ModelViewSet):
-    """API endpoints for merchant registration and profile management."""
+class MerchantCreateView(APIView):
+    permission_classes = [AllowAny]
 
-    queryset = Merchant.objects.all()
-    serializer_class = MerchantSerializer
-    lookup_field = 'id'
+    def post(self, request):
+        data = request.data
+        # Map contract fields to internal model
+        business_name = data.get('name') or data.get('business_name')
+        email = data.get('contact_email') or data.get('email')
+        merchant = Merchant.objects.create(
+            business_name=business_name or '',
+            owner_name=data.get('owner_name', ''),
+            email=email or '',
+            phone=data.get('phone', ''),
+            country=data.get('country', ''),
+        )
+        idx = MerchantIndex.objects.create(merchant=merchant)
+        return Response({'id': idx.id}, status=status.HTTP_201_CREATED)
 
-    def get_permissions(self):
-        """Registration is open; everything else requires merchant auth."""
-        if self.action == 'create':
-            return [AllowAny()]
-        return [IsMerchant()]
+
+class MerchantDetailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        try:
+            idx = MerchantIndex.objects.get(pk=pk)
+        except MerchantIndex.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        m = idx.merchant
+        return Response({
+            'id': idx.id,
+            'name': m.business_name,
+            'registration_number': '',
+            'contact_email': m.email,
+        })

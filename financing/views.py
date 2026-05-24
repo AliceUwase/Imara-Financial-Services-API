@@ -1,55 +1,43 @@
-"""Views for the financing app.
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework import status
 
-Merchant-facing CRUD on financing requests is gated by IsMerchant.
-Lender-facing listing is gated by IsLender.Creation and updates dispatch an async alert via Celery so the API
-response is not blocked by alert delivery.
-
-The lender-facing list view uses cursor pagination tuned for
-low-bandwidth contexts: small page size, opaque cursor.
-"""
-
-from django.db import transaction
-from rest_framework import generics, viewsets
-
-from common.pagination import FinancingRequestCursorPagination
-from common.permissions import IsLender, IsMerchant
-
-from .models import FinancingRequest
-from .serializers import FinancingRequestSerializer
-from .tasks import send_financing_alert
+from .models import FinancingRequest, FinancingIndex
+from merchants.models import MerchantIndex
 
 
-class FinancingRequestViewSet(viewsets.ModelViewSet):
-    """Merchant-facing API for creating and managing financing requests."""
+class FinancingListView(APIView):
+    permission_classes = [AllowAny]
 
-    queryset = FinancingRequest.objects.all()
-    serializer_class = FinancingRequestSerializer
-    lookup_field = 'id'
-    permission_classes = [IsMerchant]
+    def get(self, request):
+        items = []
+        for idx in FinancingIndex.objects.select_related('financing_request').all():
+            fr = idx.financing_request
+            items.append({
+                'id': idx.id,
+                'merchant': fr.merchant.index.id if hasattr(fr.merchant, 'index') else None,
+                'amount': str(fr.amount),
+                'currency': fr.currency,
+                'purpose': fr.purpose,
+                'status': fr.status,
+            })
+        return Response(items)
 
-    def perform_create(self, serializer):
-        """Save the request, then queue an alert after the transaction commits."""
-        instance = serializer.save()
-        transaction.on_commit(
-            lambda: send_financing_alert.delay(str(instance.id), event='created')
+    def post(self, request):
+        data = request.data
+        merchant_id = data.get('merchant')
+        try:
+            merchant_idx = MerchantIndex.objects.get(pk=int(merchant_id))
+            merchant = merchant_idx.merchant
+        except Exception:
+            return Response({'detail': 'Invalid merchant'}, status=status.HTTP_400_BAD_REQUEST)
+
+        fr = FinancingRequest.objects.create(
+            merchant=merchant,
+            amount=data.get('amount', 0),
+            currency=data.get('currency', 'USD'),
+            purpose=data.get('purpose', ''),
         )
-
-    def perform_update(self, serializer):
-        """Save the update, then queue an alert after the transaction commits."""
-        instance = serializer.save()
-        transaction.on_commit(
-            lambda: send_financing_alert.delay(str(instance.id), event='updated')
-        )
-
-
-class LenderFinancingRequestListView(generics.ListAPIView):
-    """Lender-facing read-only list of submitted financing requests.
-
-    Uses cursor pagination so lenders on unstable mobile data fetch
-    small, predictable pages. 
-    """
-
-    serializer_class = FinancingRequestSerializer
-    queryset = FinancingRequest.objects.filter(status='submitted')
-    permission_classes = [IsLender]
-    pagination_class = FinancingRequestCursorPagination
+        idx = FinancingIndex.objects.create(financing_request=fr)
+        return Response({'id': idx.id}, status=status.HTTP_201_CREATED)

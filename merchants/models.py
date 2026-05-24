@@ -35,3 +35,20 @@ class Merchant(models.Model):
 
     def __str__(self) -> str:
         return f'{self.business_name} ({self.email})'
+
+
+class MerchantIndex(models.Model):
+    """Integer index mapping for external API compatibility.
+
+
+    """
+
+    id = models.AutoField(primary_key=True)
+    merchant = models.OneToOneField(
+        Merchant,
+        on_delete=models.CASCADE,
+        related_name='index',
+    )
+
+    def __str__(self) -> str:
+        return f'Index {self.id} -> {self.merchant}'
