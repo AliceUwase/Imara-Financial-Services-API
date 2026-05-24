@@ -15,7 +15,6 @@ class MerchantCreateView(APIView):
 
     def post(self, request):
         data = request.data
-        # Maps contract fields to internal model
         business_name = data.get('name') or data.get('business_name')
         email = data.get('contact_email') or data.get('email')
         if not email:
@@ -24,21 +23,16 @@ class MerchantCreateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if Merchant.objects.filter(email=email).exists():
-            return Response(
-                {'email': ['A merchant with this email already exists.']},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        
-
-        merchant = Merchant.objects.create(
-            business_name=business_name or '',
-            owner_name=data.get('owner_name', ''),
+        merchant, _ = Merchant.objects.get_or_create(
             email=email,
-            phone=data.get('phone', ''),
-            country=data.get('country', ''),
+            defaults={
+                'business_name': business_name or '',
+                'owner_name': data.get('owner_name', ''),
+                'phone': data.get('phone', ''),
+                'country': data.get('country', ''),
+            },
         )
-        idx = MerchantIndex.objects.create(merchant=merchant)
+        idx, _ = MerchantIndex.objects.get_or_create(merchant=merchant)
         return Response({'id': idx.id}, status=status.HTTP_201_CREATED)
 
 
