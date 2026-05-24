@@ -1,0 +1,569 @@
+openapi: 3.0.3
+info:
+  title: Imara Financial Services API
+  version: 1.0.0
+  description: Merchant onboarding and financing requests MVP.
+paths:
+  /api/v1/financing-requests/:
+    get:
+      operationId: v1_financing_requests_list
+      description: Merchant-facing API for creating and managing financing requests.
+      tags:
+      - v1
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FinancingRequest'
+          description: ''
+    post:
+      operationId: v1_financing_requests_create
+      description: Merchant-facing API for creating and managing financing requests.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancingRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FinancingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FinancingRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancingRequest'
+          description: ''
+  /api/v1/financing-requests/{id}/:
+    get:
+      operationId: v1_financing_requests_retrieve
+      description: Merchant-facing API for creating and managing financing requests.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this financing request.
+        required: true
+      tags:
+      - v1
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancingRequest'
+          description: ''
+    put:
+      operationId: v1_financing_requests_update
+      description: Merchant-facing API for creating and managing financing requests.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this financing request.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancingRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FinancingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FinancingRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancingRequest'
+          description: ''
+    patch:
+      operationId: v1_financing_requests_partial_update
+      description: Merchant-facing API for creating and managing financing requests.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this financing request.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFinancingRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFinancingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFinancingRequest'
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancingRequest'
+          description: ''
+    delete:
+      operationId: v1_financing_requests_destroy
+      description: Merchant-facing API for creating and managing financing requests.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this financing request.
+        required: true
+      tags:
+      - v1
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/lender/financing-requests/:
+    get:
+      operationId: v1_lender_financing_requests_list
+      description: |-
+        Lender-facing read-only list of submitted financing requests.
+
+        Uses cursor pagination so lenders on unstable mobile data fetch
+        small, predictable pages.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFinancingRequestList'
+          description: ''
+  /api/v1/merchants/:
+    get:
+      operationId: v1_merchants_list
+      description: API endpoints for merchant registration and profile management.
+      tags:
+      - v1
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Merchant'
+          description: ''
+    post:
+      operationId: v1_merchants_create
+      description: API endpoints for merchant registration and profile management.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Merchant'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Merchant'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Merchant'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Merchant'
+          description: ''
+  /api/v1/merchants/{id}/:
+    get:
+      operationId: v1_merchants_retrieve
+      description: API endpoints for merchant registration and profile management.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this merchant.
+        required: true
+      tags:
+      - v1
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Merchant'
+          description: ''
+    put:
+      operationId: v1_merchants_update
+      description: API endpoints for merchant registration and profile management.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this merchant.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Merchant'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Merchant'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Merchant'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Merchant'
+          description: ''
+    patch:
+      operationId: v1_merchants_partial_update
+      description: API endpoints for merchant registration and profile management.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this merchant.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMerchant'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMerchant'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMerchant'
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Merchant'
+          description: ''
+    delete:
+      operationId: v1_merchants_destroy
+      description: API endpoints for merchant registration and profile management.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this merchant.
+        required: true
+      tags:
+      - v1
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    FinancingRequest:
+      type: object
+      description: Serializer for FinancingRequest create, read, and update operations
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        merchant:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        currency:
+          type: string
+          maxLength: 3
+        purpose:
+          type: string
+        payback_date:
+          type: string
+          format: date
+          nullable: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/FinancingRequestStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - created_at
+      - id
+      - merchant
+      - purpose
+      - status
+      - updated_at
+    FinancingRequestStatusEnum:
+      enum:
+      - submitted
+      - under_review
+      - approved
+      - rejected
+      type: string
+      description: |-
+        * `submitted` - Submitted
+        * `under_review` - Under Review
+        * `approved` - Approved
+        * `rejected` - Rejected
+    Merchant:
+      type: object
+      description: Serializer for Merchant create, read, and update operations
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        business_name:
+          type: string
+          maxLength: 200
+        owner_name:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+        country:
+          type: string
+          maxLength: 100
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MerchantStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - business_name
+      - country
+      - created_at
+      - email
+      - id
+      - owner_name
+      - phone
+      - status
+      - updated_at
+    MerchantStatusEnum:
+      enum:
+      - pending
+      - active
+      - suspended
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `active` - Active
+        * `suspended` - Suspended
+    PaginatedFinancingRequestList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FinancingRequest'
+    PatchedFinancingRequest:
+      type: object
+      description: Serializer for FinancingRequest create, read, and update operations
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        merchant:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        currency:
+          type: string
+          maxLength: 3
+        purpose:
+          type: string
+        payback_date:
+          type: string
+          format: date
+          nullable: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/FinancingRequestStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedMerchant:
+      type: object
+      description: Serializer for Merchant create, read, and update operations
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        business_name:
+          type: string
+          maxLength: 200
+        owner_name:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+        country:
+          type: string
+          maxLength: 100
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MerchantStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
