@@ -6,7 +6,8 @@ increment: a runnable Django REST API with merchant registration,
 financing request creation, a lender-facing feed, and an async alert
 flow.
 
-The architecture is documented in [`ADR.md`](./ADR.md). The API schema is in [`docs/schema.yaml`](./docs/schema.yaml).
+
+- **Autograder root schema:** `schema.yaml` at the repository root 
 
 ---
 
@@ -145,7 +146,7 @@ copy it to `.env` before running.
 ## Running the Async Worker
 
 Financing request creation and updates dispatch a background alert via
-Celery. The Django web process does not block on alert delivery — the
+Celery. The Django web process does not block on alert delivery, the
 API returns immediately and the worker processes the alert
 asynchronously.
 
@@ -186,52 +187,75 @@ appear in the Django admin under **Financing → Alert attempts**.
 
 ## Example Requests
 
-All examples assume the Django server is running at
-`http://127.0.0.1:8000/`. Replace `MERCHANT_TOKEN`, `LENDER_TOKEN`, and
-`MERCHANT_UUID` with the values from your setup. Token authentication
-uses the header `Authorization: Token <key>` (note the literal word
-`Token`).
+All examples assume the Django server is running at `http://127.0.0.1:8000/`.
+The project exposes the F1-facing API on unversioned `/api/` paths so
+that the autograder can reach them directly. Replace `MERCHANT_TOKEN`,
+`LENDER_TOKEN`, and any `MERCHANT_ID` with values from your setup. Token
+authentication uses the header `Authorization: Token <key>` (note the
+literal word `Token`).
 
 ### Register a new merchant
 
-`POST /api/v1/merchants/` is open to unauthenticated callers, since
-registration must work before a token exists.
+`POST /api/merchants/` is open to unauthenticated callers (registration
+must work before a token exists). The F1 autograder expects this
+endpoint to return a small integer `id` that maps to the created
+merchant (see Index models below).
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/merchants/ \
+curl -X POST http://127.0.0.1:8000/api/merchants/ \
   -H "Content-Type: application/json" \
   -d '{"business_name":"Sunrise Bakery","owner_name":"Jane Doe","email":"jane@sunrise.com","phone":"+250788123456","country":"Rwanda"}'
 ```
 
-Expected response: `201 Created` with the merchant record including a
-generated UUID `id` and `status: "pending"`.
+Expected response: `201 Created` with a JSON body containing a small
+integer id, for example:
+
+```json
+{ "id": 1 }
+```
+
+Notes:
+- Merchant creation is idempotent by `email`: if the email already
+  exists the view returns `201` with the existing integer id rather
+  than failing with a 400/IntegrityError. This supports repeatable
+  autograder runs.
+- Internally merchants use UUID primary keys; the integer `id` is
+  provided by a separate `MerchantIndex` model that maps to the UUID.
 
 ### Retrieve a merchant profile
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/merchants/MERCHANT_UUID/ \
+curl http://127.0.0.1:8000/api/merchants/1/ \
   -H "Authorization: Token MERCHANT_TOKEN"
 ```
 
-Expected response: `200 OK` with the merchant's full record.
+Expected response: `200 OK` with the merchant's public record. The
+response includes the `contact_email` and other public fields; the
+internal UUID is not required by the autograder.
 
 ### Submit a financing request
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/financing-requests/ \
+curl -X POST http://127.0.0.1:8000/api/financing/requests/ \
   -H "Authorization: Token MERCHANT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"merchant":"MERCHANT_UUID","amount":"5000.00","currency":"USD","purpose":"Inventory restocking for the upcoming quarter"}'
+  -d '{"merchant":1,"amount":"5000.00","currency":"USD","purpose":"Inventory restocking for the upcoming quarter"}'
 ```
 
-Expected response: `201 Created` with the new financing request, status
-`submitted`. An `AlertAttempt` will appear in the admin within a second
-as the async alert is processed.
+Expected response: `201 Created` with a JSON body containing the new
+integer `id` for the financing request, for example:
+
+```json
+{ "id": 1 }
+```
+
+An `AlertAttempt` should appear in the Django admin shortly after if
+the Celery worker and Redis are running.
 
 ### List submitted financing requests as a lender
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/lender/financing-requests/ \
+curl http://127.0.0.1:8000/api/lender/financing-requests/ \
   -H "Authorization: Token LENDER_TOKEN"
 ```
 
@@ -239,10 +263,10 @@ Expected response: `200 OK` with a paginated payload:
 
 ```json
 {
-  "next": "http://127.0.0.1:8000/api/v1/lender/financing-requests/?cursor=...",
+  "next": "http://127.0.0.1:8000/api/lender/financing-requests/?cursor=...",
   "previous": null,
   "results": [
-    { "id": "...", "amount": "5000.00", "currency": "USD", "status": "submitted", ... }
+    { "id": 1, "amount": "5000.00", "currency": "USD", "status": "submitted", ... }
   ]
 }
 ```
@@ -252,11 +276,14 @@ Default page size is 10. Override with `?page_size=N` up to a maximum of
 
 ### Verify a validation error
 
+Use the integer merchant id when testing validation errors against the
+F1-facing endpoint:
+
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/financing-requests/ \
+curl -X POST http://127.0.0.1:8000/api/financing/requests/ \
   -H "Authorization: Token MERCHANT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"merchant":"MERCHANT_UUID","amount":"-100","currency":"USD","purpose":"Should fail"}'
+  -d '{"merchant":1,"amount":"-100","currency":"USD","purpose":"Should fail"}'
 ```
 
 Expected response: `400 Bad Request` in the consistent error envelope:
@@ -278,8 +305,11 @@ Expected response: `400 Bad Request` in the consistent error envelope:
 The API was documented using the OpenAPI 3 standard. Three views of the schema are
 available:
 
-- **Static schema file:** [`docs/schema.yaml`](./docs/schema.yaml) —
-  versioned in this repository, readable without running the server.
+- **Static schema file (human-readable):** [`schema.yaml`](./schema.yaml) —
+  versioned in this repository for review and documentation.
+- **Autograder schema (root):** [`schema.yaml`](./schema.yaml) — the F1
+  autograder expects a schema at the repository root. Regenerate with
+  `py manage.py spectacular --file schema.yaml` (see below).
 - **Interactive Swagger UI:** `http://127.0.0.1:8000/api/schema/swagger-ui/`
   when the server is running.
 - **ReDoc rendering:** `http://127.0.0.1:8000/api/schema/redoc/` when
@@ -298,12 +328,12 @@ advanced-python-imara-AliceUwase/
 ├── merchants/              # Merchant onboarding domain
 ├── financing/              # Financing requests and async alerts
 ├── common/                 # Shared infrastructure (permissions, exception handler, pagination, UserProfile)
-├── docs/                   # ADR template, schema
+├── docs/                   # ADR template
 ├── .env.example            # Environment variable template
 ├── manage.py               # Django entry point
 ├── requirements.txt        # Python dependencies
 ├── README.md               # This file
-└── ADR.md                  # The rationale behind the bounded-app structure
+└── ADR.md, schema.yaml     # The rationale behind the bounded-app structure 
 ```
 
 ## Troubleshooting
