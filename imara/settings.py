@@ -27,7 +27,7 @@ SECRET_KEY = config('DJANGO_SECRET_KEY', default='dev-insecure-replace-me-before
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS',  default='localhost,127.0.0.1, testserver').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS',  default='localhost,127.0.0.1,testserver').split(',')
 
 
 
