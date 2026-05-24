@@ -6,7 +6,7 @@ increment: a runnable Django REST API with merchant registration,
 financing request creation, a lender-facing feed, and an async alert
 flow.
 
-The architecture is documented in [`ADR.md`](./ADR.md). The API schema is in [`docs/openapi.yaml`](./docs/openapi.yaml).
+The architecture is documented in [`ADR.md`](./ADR.md). The API schema is in [`docs/schema.yaml`](./docs/schema.yaml).
 
 ---
 
@@ -275,10 +275,10 @@ Expected response: `400 Bad Request` in the consistent error envelope:
 
 ## API Documentation
 
-The API is documented via OpenAPI 3. Three views of the schema are
+The API was documented using the OpenAPI 3 standard. Three views of the schema are
 available:
 
-- **Static schema file:** [`docs/openapi.yaml`](./docs/openapi.yaml) —
+- **Static schema file:** [`docs/schema.yaml`](./docs/schema.yaml) —
   versioned in this repository, readable without running the server.
 - **Interactive Swagger UI:** `http://127.0.0.1:8000/api/schema/swagger-ui/`
   when the server is running.
@@ -298,7 +298,7 @@ advanced-python-imara-AliceUwase/
 ├── merchants/              # Merchant onboarding domain
 ├── financing/              # Financing requests and async alerts
 ├── common/                 # Shared infrastructure (permissions, exception handler, pagination, UserProfile)
-├── docs/                   # ADR template, OpenAPI schema
+├── docs/                   # ADR template, schema
 ├── .env.example            # Environment variable template
 ├── manage.py               # Django entry point
 ├── requirements.txt        # Python dependencies
