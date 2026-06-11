@@ -13,6 +13,9 @@ class UserProfile(models.Model):
     class Role(models.TextChoices):
         MERCHANT = 'merchant', 'Merchant'
         LENDER = 'lender', 'Lender'
+        COMPLIANCE = 'compliance', 'Compliance / Admin'
+        SUPPORT = 'support', 'Support Staff'
+
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -22,6 +25,16 @@ class UserProfile(models.Model):
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
+        default=Role.SUPPORT,
+    )
+    # Only set for merchant-role users: the merchant they may access.
+    # Left null for lender/compliance/support, who aren't tied to one merchant.
+    merchant = models.ForeignKey(
+        'merchants.Merchant',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='user_profiles',
     )
 
     def __str__(self) -> str:
