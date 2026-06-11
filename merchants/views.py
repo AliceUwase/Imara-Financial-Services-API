@@ -8,6 +8,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework import status
 
 from .models import Merchant, MerchantIndex
+from rest_framework.authtoken.models import Token
+from rest_framework.authtoken.views import ObtainAuthToken
 
 
 class MerchantCreateView(APIView):
@@ -50,4 +52,31 @@ class MerchantDetailView(APIView):
             'name': m.business_name,
             'registration_number': '',
             'contact_email': m.email,
+        })
+
+class ApiTokenLoginView(ObtainAuthToken):
+
+    def post(self, request, *args, **kwargs):
+        # Hand the submitted credentials to DRF's validator
+        serializer = self.serializer_class(
+            data=request.data,
+            context={"request": request},
+        )
+        # Raises a 400 with an error if username/password are wrong
+        serializer.is_valid(raise_exception=True)
+
+        # The validated user is whoever just proved their identity.=
+        user = serializer.validated_data["user"]
+
+        # get_or_create reuses the same token across logins instead of
+        # minting a new one each time the token stays valid until we
+        # delete it, which is how we revoke access.
+        token, _ = Token.objects.get_or_create(user=user)
+
+        # Return the token and just enough identity for the client to use.
+        return Response({
+            "token": token.key,
+            "user_id": user.pk,
+            "username": user.username,
+            "is_staff": user.is_staff,   # lets the dashboard know it's staff
         })
