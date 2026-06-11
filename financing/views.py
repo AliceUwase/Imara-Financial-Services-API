@@ -3,17 +3,42 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
+from common.permissions import IsMerchant, IsLender, IsCompliance
+from common.models import UserProfile
 from .models import FinancingRequest, FinancingIndex
 from merchants.models import MerchantIndex
 
 
 
+
 class FinancingListView(APIView):
-    permission_classes = [IsAuthenticated]
+    # Different roles for different actions: the three roles may LIST,
+    # but only a merchant may CREATE a financing request.
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAuthenticated(), IsMerchant()]
+        return [IsAuthenticated(), (IsMerchant | IsLender | IsCompliance)()]
+
+    def get_visible_indexes(self, request):
+        base = FinancingIndex.objects.select_related(
+            'financing_request',
+            'financing_request__merchant',
+            'financing_request__merchant__index',
+        )
+
+        # A merchant sees only requests belonging to their own merchant.
+        # If their profile has no merchant linked, this safely returns nothing.
+        if request.user.profile.role == UserProfile.Role.MERCHANT:
+            return base.filter(
+                financing_request__merchant=request.user.profile.merchant
+            )
+
+        # Lenders and compliance review across all merchants.
+        return base
 
     def get(self, request):
         items = []
-        for idx in FinancingIndex.objects.select_related('financing_request').all():
+        for idx in self.get_visible_indexes(request):
             fr = idx.financing_request
             items.append({
                 'id': idx.id,
