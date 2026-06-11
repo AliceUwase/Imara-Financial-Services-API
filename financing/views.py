@@ -5,6 +5,8 @@ from rest_framework import status
 
 from common.permissions import IsMerchant, IsLender, IsCompliance
 from common.models import UserProfile
+from common.models import AccessLog
+from common.audit import log_access
 from .models import FinancingRequest, FinancingIndex
 from merchants.models import MerchantIndex
 
@@ -48,6 +50,14 @@ class FinancingListView(APIView):
                 'purpose': fr.purpose,
                 'status': fr.status,
             })
+            # We log only the index ids that were returned, never the contents.
+        log_access(
+            request,
+            action=AccessLog.Action.LIST_FINANCING,
+            record_ids=[item['id'] for item in items],
+            resource_type='financing_request',
+        )
+
         return Response(items)
 
     def post(self, request):
