@@ -23,7 +23,7 @@ urlpatterns = [
     path('api/health/', health, name='health'),
     path('api/merchants/', include('merchants.urls')),
     path('api/financing/requests/', include('financing.urls')),
-    path("api/auth/token/", ApiTokenLoginView.as_view(), name="api_token_login"),
+    path("api/auth/token/", obtain_auth_token, name="api_token_login"),
     path("api-auth/", include("rest_framework.urls")),
 
     # API schema 
