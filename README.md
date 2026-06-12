@@ -356,6 +356,7 @@ and fill in:
 | Auth      | Financing endpoint open (`AllowAny`)         | Authentication required; anonymous returns 401              |
 | Access    | Any caller saw all records                   | Role gate + per-record filter (merchant sees their own )|
 | Visibility| No record of who viewed sensitive data       |  `AccessLog` on every sensitive read      |
+| Authorization | Role had no effect on allowed actions | Create restricted to merchants; other roles get 403 |
 | Secrets   | Keys in settings                             | Secrets in environment variables                      |
 
 ## API Documentation

@@ -25,7 +25,6 @@ The built-in tokens we chose do not expire on their own, as they stay valid unti
 
 Automatic token expiry and refresh, multi-factor authentication for staff, and any future move to OAuth 2.0 or single sign-on are left for later hardening.
 
-
 ## Decision II: Role and Access-Boundary Model
 
 Using RBAC, each user has a role, and that role decides what actions they may take, which is strengthened with `object-level` checks (data-aware access) on top of the role, the system filters results so that a user only sees specific records that belong to them.
@@ -45,8 +44,11 @@ RBAC is detailed than ABAC. Dynamic, context-driven rules, for eaxample, access 
 
 ## Deferred Work
 
-A full attribute-based policy engine and any context-based rules (time, location, risk scoring) are deferred. If actor types multiply or rules become conditional, ABAC can be revisited.
+An attribute-based functionality and any context-based rules (time, location, risk scoring) are deferred. If actor types multiply or rules become conditional, ABAC can be revisited.
 
+**Retrofit outcome (F1 to F2):** In Formative 1, the financing list returned every
+record to any caller, with no role distinction. In F2, access is both
+role-gated and data-aware: a role gate in this case is the one that decides who  access the endpoint, and a per-record filter scopes the rows where a merchant sees only their own merchant's financing requests, lenders and compliance see the full set, and support is rejected  with 403. 
 
 ## Decision III: Privacy and Auditability Approach
 
@@ -67,6 +69,11 @@ Writing an audit record on every sensitive read might add a small amount of work
 ## Deferred Work
 
 A managed secret manager, encryption of stored data at rest, tamper-proof (append-only) storage with a retention policy for the audit log were defered fo future stages.
+
+**Retrofit outcome (F1 to F2):** In Formative 1, there was no track of who viewed
+sensitive financial data, and secrets lived in the settings file. In Formative 2, every sensitive read writes a privacy-safe `AccessLog` entry, which indiccates who, their role, the action, the record references, the IP, and the time  references
+only, with no amounts or personal data stored and is readable by compliance
+through a read-only, append-only admin. 
 
 ### How these decisions resolve the stakeholdr tensions
 
