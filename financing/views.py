@@ -19,7 +19,7 @@ class FinancingListView(APIView):
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAuthenticated(), IsMerchant()]
-        return [IsAuthenticated(), (IsMerchant | IsLender | IsCompliance)()]
+        return [IsAuthenticated(), IsMerchant() | IsLender() | IsCompliance()]
 
     def get_visible_indexes(self, request):
         base = FinancingIndex.objects.select_related(

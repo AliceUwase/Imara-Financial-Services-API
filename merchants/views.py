@@ -4,7 +4,7 @@
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 
 from .models import Merchant, MerchantIndex
@@ -13,7 +13,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 
 
 class MerchantCreateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         data = request.data

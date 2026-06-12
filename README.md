@@ -300,6 +300,64 @@ Expected response: `400 Bad Request` in the consistent error envelope:
 
 ---
 
+## Authentication
+The API uses two mechanisms for authentication according to the client type:
+
+- **Staff (compliance/admin)** authenticate by **session** (cookie) login,
+  via the Django admin and the browsable API at `/api-auth/login/`.
+- **API consumers (merchants, lender partners)** use **token** auth. POST
+  credentials to `/api/auth/token/` to receive a token, then send it on
+  every request:
+
+```
+  Authorization: Token <your-token>
+```
+### Authentication vs authorization
+- Missing / invalid credentials → **401 Unauthorized** (the system can't
+  tell who you are).
+- A valid user whose role isn't permitted → **403 Forbidden** (known
+  identity, limited rights).
+
+## Roles and access boundaries
+
+Access is `role-based` and `data-aware`: the role decides which endpoints a
+user may reach, and a per-record filter decides which rows they are to see.
+
+| Role        | List financing (GET)            | Create financing (POST) | Audit log |
+|-------------|---------------------------------|-------------------------|-----------|
+| Merchant    | Own merchant's requests only    | Yes                     | No        |
+| Lender      | All requests                    | No (403)                | No        |
+| Compliance  | All requests                    | No (403)                | Yes (admin) |
+| Support     | No (403)                        | No (403)                | No        |
+
+## Audit logging and privacy
+
+Every read of sensitive financial records is recorded in an append-only
+`AccessLog`. Each entry stores **references only**, meaning that the user, their role,
+the action, the record ids returned, the IP, and a timestamp. It
+deliberately stores **no** amounts, currencies, purposes, or personal data,
+so the audit trail won't itself leak the data it protects. Compliance users
+review the trail in the admin (**Common → Access logs**), where it is
+read-only and cannot be edited or deleted.
+
+## Configuration
+
+Secrets are read from environment variables — copy `.env.example` to `.env`
+and fill in:
+
+- `SECRET_KEY` — Django signing key
+- `DEBUG` — `False` in any shared environment
+- `ALLOWED_HOSTS` — comma-separated hosts
+- `SECURE_COOKIES` — `True` in production for HTTPS-only session/CSRF cookies
+
+## What changed in F2 (compliance retrofit)
+| Area      | In F1                                 | In F2                                          |
+|-----------|----------------------------------------------|-------------------------------------------------------|
+| Auth      | Financing endpoint open (`AllowAny`)         | Authentication required; anonymous returns 401              |
+| Access    | Any caller saw all records                   | Role gate + per-record filter (merchant sees their own )|
+| Visibility| No record of who viewed sensitive data       |  `AccessLog` on every sensitive read      |
+| Secrets   | Keys in settings                             | Secrets in environment variables                      |
+
 ## API Documentation
 
 The API was documented using the OpenAPI 3 standard. Three views of the schema are
