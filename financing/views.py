@@ -9,6 +9,8 @@ from common.models import AccessLog
 from common.audit import log_access
 from .models import FinancingRequest, FinancingIndex
 from merchants.models import MerchantIndex
+from common.permissions import IsMerchant, IsLender, IsCompliance, IsMerchantLenderOrCompliance
+    
 
 
 
@@ -19,7 +21,7 @@ class FinancingListView(APIView):
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAuthenticated(), IsMerchant()]
-        return [IsAuthenticated(), IsMerchant() | IsLender() | IsCompliance()]
+        return [IsAuthenticated(), IsMerchantLenderOrCompliance()]
 
     def get_visible_indexes(self, request):
         base = FinancingIndex.objects.select_related(

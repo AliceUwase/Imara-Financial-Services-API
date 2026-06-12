@@ -13,7 +13,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 
 
 class MerchantCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         data = request.data

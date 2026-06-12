@@ -67,3 +67,17 @@ class IsSupport(BasePermission):
             return user.profile.role == UserProfile.Role.SUPPORT
         except UserProfile.DoesNotExist:
             return False
+        
+class IsMerchantLenderOrCompliance(BasePermission):
+    def has_permission(self, request, view) -> bool:
+        if not request.user.is_authenticated:
+            return False
+        try:
+            role = request.user.profile.role
+            return role in (
+                UserProfile.Role.MERCHANT,
+                UserProfile.Role.LENDER,
+                UserProfile.Role.COMPLIANCE,
+            )
+        except UserProfile.DoesNotExist:
+            return False
