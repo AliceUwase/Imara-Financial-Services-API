@@ -10,6 +10,24 @@ from rest_framework import status
 from .models import Merchant, MerchantIndex
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
+from django.contrib.auth import authenticate, login
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SessionLoginView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is None:
+            return Response({'detail': 'Invalid credentials.'}, status=status.HTTP_400_BAD_REQUEST)
+        login(request, user)
+        return Response({'username': user.username, 'is_staff': user.is_staff})
+
 
 
 class MerchantCreateView(APIView):
@@ -73,15 +91,15 @@ class ApiTokenLoginView(ObtainAuthToken):
         # delete it, which is how we revoke access.
         token, _ = Token.objects.get_or_create(user=user)
 
+        # Return the token and just enough identity for the client to use.
         try:
             role = user.profile.role
         except Exception:
             role = ''
-
         return Response({
             "token": token.key,
             "user_id": user.pk,
             "username": user.username,
             "is_staff": user.is_staff,
             "role": role,
-        })
+    })
