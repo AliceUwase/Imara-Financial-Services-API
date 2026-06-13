@@ -73,11 +73,11 @@ class ApiTokenLoginView(ObtainAuthToken):
         # delete it, which is how we revoke access.
         token, _ = Token.objects.get_or_create(user=user)
 
-        # Return the token and just enough identity for the client to use.
         try:
             role = user.profile.role
         except Exception:
             role = ''
+
         return Response({
             "token": token.key,
             "user_id": user.pk,
