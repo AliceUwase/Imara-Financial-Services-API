@@ -13,11 +13,26 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers
+
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class SessionLoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+    @extend_schema(
+        request=inline_serializer(
+            name='SessionLogin',
+            fields={'username': serializers.CharField(), 'password': serializers.CharField()},
+        ),
+        responses={200: inline_serializer(
+            name='SessionLoginResponse', 
+            fields={'username': serializers.CharField(), 'is_staff': serializers.BooleanField()},
+        )},
+    )
 
     def post(self, request):
         username = request.data.get('username')
