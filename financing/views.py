@@ -10,7 +10,7 @@ from common.audit import log_access
 from .models import FinancingRequest, FinancingIndex
 from merchants.models import MerchantIndex
 from common.permissions import IsMerchant, IsLender, IsCompliance, IsMerchantLenderOrCompliance
-    
+from django.db import transaction    
 
 
 
@@ -71,11 +71,31 @@ class FinancingListView(APIView):
         except Exception:
             return Response({'detail': 'Invalid merchant'}, status=status.HTTP_400_BAD_REQUEST)
 
-        fr = FinancingRequest.objects.create(
-            merchant=merchant,
-            amount=data.get('amount', 0),
-            currency=data.get('currency', 'USD'),
-            purpose=data.get('purpose', ''),
+        if request.user.profile.merchant_id != merchant.pk:
+            return Response(
+                {'detail': 'You may only submit financing requests for your own merchant account.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        
+        from .serializers import FinancingRequestSerializer
+        serializer = FinancingRequestSerializer(data={
+            'merchant': merchant.pk,
+            'amount': data.get('amount'),
+            'currency': data.get('currency', 'USD'),
+            'purpose': data.get('purpose', ''),
+            'payback_date': data.get('payback_date'),
+        })
+        serializer.is_valid(raise_exception=True)
+        from django.db import transaction
+        with transaction.atomic():
+            fr = serializer.save()
+            idx = FinancingIndex.objects.create(financing_request=fr)
+            log_access(
+            request,
+            action=AccessLog.Action.CREATE_FINANCING,
+            record_ids=[idx.id],
+            resource_type='financing_request',
         )
-        idx = FinancingIndex.objects.create(financing_request=fr)
-        return Response({'id': idx.id}, status=status.HTTP_201_CREATED)
+            
+            return Response({'id': idx.id}, status=status.HTTP_201_CREATED)
+

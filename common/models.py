@@ -44,6 +44,7 @@ class AccessLog(models.Model):
         LIST_FINANCING = 'list_financing', 'Listed financing requests'
         VIEW_FINANCING = 'view_financing', 'Viewed a financing request'
         EXPORT_FINANCING = 'export_financing', 'Exported financing data'
+        CREATE_FINANCING = 'create_financing', 'Created a financing request'
 
     id = models.UUIDField(
         primary_key=True,
