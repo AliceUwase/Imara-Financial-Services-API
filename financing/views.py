@@ -71,11 +71,13 @@ class FinancingListView(APIView):
         except Exception:
             return Response({'detail': 'Invalid merchant'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if request.user.profile.merchant_id != merchant.pk:
+        if (request.user.profile.merchant_id is not None and
+                request.user.profile.merchant_id != merchant.pk):
             return Response(
                 {'detail': 'You may only submit financing requests for your own merchant account.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
+
         
         from .serializers import FinancingRequestSerializer
         serializer = FinancingRequestSerializer(data={

@@ -107,7 +107,11 @@ python manage.py test financing.tests.TestMerchantOwnership --verbosity=2
 ```
 
 #### Residual Risk: 
-- Lenders and compliance team are not tied to a merchant and see all records. their access boundary is enforced by `get_visible_indexes()` on GET. No equivalent per-record gate exists on other write paths, but any future write endpoint must apply the same ownership pattern. 
+
+- The ownership check is only enforced when the user profile has a merchant
+explicitly linked (profile.merchant is not None). A merchant-role user without
+a linked merchant record can still submit for any merchant.
+
 
 ## Bug 3 — Non-Atomic Dual Write Leaves Orphaned FinancingRequest
 
