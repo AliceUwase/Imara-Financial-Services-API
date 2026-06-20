@@ -57,7 +57,7 @@ celery -A imara worker --loglevel=info
 Tests use an in-memory SQLite database and require no running services.
 
 ```bash
-# Full suite (60 tests)
+# Full suite (66 tests)
 python manage.py test --verbosity=2
 
 # Single app
@@ -66,12 +66,12 @@ python manage.py test merchants.tests --verbosity=2
 python manage.py test common.tests --verbosity=2
 ```
 
-Expected output: `Ran 60 tests in Xs ... OK`
+Expected output: `Ran 66 tests in Xs ... OK`
 
 | Layer | Test classes | Focus |
 |-------|-------------|-------|
 | Unit | `TestPermissionClasses`, `TestGetRole`, `TestGetClientIp`, `TestFinancingSerializerUnit` | Individual functions and validators |
-| Integration | `TestMerchantCreate`, `TestTokenLogin`, `TestMerchantDetail` | Full HTTP request/response cycle |
+| Integration | `TestMerchantCreate`, `TestTokenLogin`, `TestMerchantDetail`, `TestSessionLogin`, `TestHealthEndpoint` | Full HTTP request/response cycle |
 | Security / role-boundary | `TestFinancingListRoleBoundaries`, `TestMerchantOwnership` | Privacy guarantees and auth gates |
 | Bug regression | `TestFinancingValidation`, `TestFinancingAtomicity`, `TestFinancingAuditLog` | Guards against the four confirmed bugs |
 
@@ -98,7 +98,17 @@ cp .env.example .env
 docker compose up --build
 ```
 
+To generate a secure `DJANGO_SECRET_KEY`:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(50))"
+```
+
 The API is available at `http://localhost:8000`.
+
+> **SQLite note:** the database file lives inside the container and is lost on
+> `docker compose down`. Use `docker compose stop` / `start` to preserve data
+> across restarts. A production deployment should migrate to PostgreSQL.
 
 ---
 
@@ -152,7 +162,7 @@ The `worker` container starts the Celery background worker connected to Redis.
 | `.env` excluded from version control | ✅ | `.gitignore` |
 | `.env.example` documents all variables | ✅ | `.env.example` |
 | Health endpoint available | ✅ | `GET /api/health/` → `{"status": "ok"}` |
-| Full test suite passes | ✅ | 60 tests, 0 failures |
+| Full test suite passes | ✅ | 66 tests, 0 failures |
 
 ---
 

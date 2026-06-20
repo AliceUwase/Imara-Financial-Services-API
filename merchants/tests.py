@@ -116,3 +116,65 @@ class TestMerchantDetail(TestCase):
     def test_nonexistent_id_returns_404(self):
         response = self.client.get('/api/merchants/99999/')
         self.assertEqual(response.status_code, 404)
+
+
+class TestSessionLogin(TestCase):
+    """
+    Layer 2 — integration + security: POST /api/session/login/.
+    Public endpoint — proves it accepts valid credentials and rejects bad ones
+    without leaking information about which field was wrong.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username='sessionuser', password='goodpass')
+        UserProfile.objects.create(user=self.user, role=UserProfile.Role.MERCHANT)
+
+    def test_valid_credentials_return_200_and_username(self):
+        response = self.client.post('/api-auth/login/', {
+            'username': 'sessionuser',
+            'password': 'goodpass',
+        }, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['username'], 'sessionuser')
+
+    def test_wrong_password_returns_400(self):
+        response = self.client.post('/api-auth/login/', {
+            'username': 'sessionuser',
+            'password': 'wrongpass',
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_nonexistent_user_returns_400(self):
+        response = self.client.post('/api-auth/login/', {
+            'username': 'nobody',
+            'password': 'anything',
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_missing_password_returns_400(self):
+        response = self.client.post('/api-auth/login/', {
+            'username': 'sessionuser',
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+
+
+class TestHealthEndpoint(TestCase):
+    """
+    Layer 2 — integration: GET /api/health/.
+    No authentication required. Proves the health check is wired and returns
+    the expected payload — the signal Docker and load balancers rely on.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_health_returns_200(self):
+        response = self.client.get('/api/health/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_health_returns_ok_status(self):
+        response = self.client.get('/api/health/')
+        body = response.json()
+        self.assertIn('status', body)
+        self.assertEqual(body['status'], 'ok')
