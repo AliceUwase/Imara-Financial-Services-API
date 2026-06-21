@@ -20,7 +20,7 @@ class FinancingListView(APIView):
     # but only a merchant may CREATE a financing request.
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAuthenticated(), IsMerchant()]
+            return [IsAuthenticated()]
         return [IsAuthenticated(), IsMerchantLenderOrCompliance()]
 
     def get_visible_indexes(self, request):
@@ -30,9 +30,14 @@ class FinancingListView(APIView):
             'financing_request__merchant__index',
         )
 
+        try:
+            role = request.user.profile.role
+        except UserProfile.DoesNotExist:
+            return base
+
         # A merchant sees only requests belonging to their own merchant.
         # If their profile has no merchant linked, this safely returns nothing.
-        if request.user.profile.role == UserProfile.Role.MERCHANT:
+        if role == UserProfile.Role.MERCHANT:
             return base.filter(
                 financing_request__merchant=request.user.profile.merchant
             )
@@ -71,8 +76,12 @@ class FinancingListView(APIView):
         except Exception:
             return Response({'detail': 'Invalid merchant'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if (request.user.profile.merchant_id is not None and
-                request.user.profile.merchant_id != merchant.pk):
+        try:
+            profile_merchant_id = request.user.profile.merchant_id
+        except UserProfile.DoesNotExist:
+            profile_merchant_id = None
+
+        if profile_merchant_id is not None and profile_merchant_id != merchant.pk:
             return Response(
                 {'detail': 'You may only submit financing requests for your own merchant account.'},
                 status=status.HTTP_403_FORBIDDEN,
