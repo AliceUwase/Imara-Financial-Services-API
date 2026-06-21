@@ -30,9 +30,15 @@ class FinancingListView(APIView):
             'financing_request__merchant__index',
         )
 
+        try:
+            role = request.user.profile.role
+        except UserProfile.DoesNotExist:
+            # Staff users (is_staff=True) have no UserProfile — they see everything.
+            return base
+
         # A merchant sees only requests belonging to their own merchant.
         # If their profile has no merchant linked, this safely returns nothing.
-        if request.user.profile.role == UserProfile.Role.MERCHANT:
+        if role == UserProfile.Role.MERCHANT:
             return base.filter(
                 financing_request__merchant=request.user.profile.merchant
             )
