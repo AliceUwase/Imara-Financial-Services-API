@@ -23,7 +23,7 @@ urlpatterns = [
     path('api/merchants/', include('merchants.urls')),
     path('api/financing/requests/', include('financing.urls')),
     path("api/auth/token/", ApiTokenLoginView.as_view(), name="api_token_login"),
-    path("api-auth/login/", SessionLoginView.as_view(), name="api_session_login"),
+    path("api/auth/session-login/", SessionLoginView.as_view(), name="api_session_login"),
     path("api-auth/", include("rest_framework.urls")),
 
     # API schema 

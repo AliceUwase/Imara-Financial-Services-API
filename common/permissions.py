@@ -72,6 +72,8 @@ class IsMerchantLenderOrCompliance(BasePermission):
     def has_permission(self, request, view) -> bool:
         if not request.user.is_authenticated:
             return False
+        if request.user.is_staff:
+            return True
         try:
             role = request.user.profile.role
             return role in (
