@@ -3,14 +3,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 
-from common.permissions import IsMerchant, IsLender, IsCompliance
-from common.models import UserProfile
-from common.models import AccessLog
+from common.permissions import IsMerchantLenderOrCompliance
+from common.models import UserProfile, AccessLog
 from common.audit import log_access
 from .models import FinancingRequest, FinancingIndex
 from merchants.models import MerchantIndex
-from common.permissions import IsMerchant, IsLender, IsCompliance, IsMerchantLenderOrCompliance
-from django.db import transaction    
+from django.db import transaction
 
 
 
