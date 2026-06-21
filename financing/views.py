@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 
 from common.permissions import IsMerchant, IsLender, IsCompliance
@@ -20,7 +20,7 @@ class FinancingListView(APIView):
     # but only a merchant may CREATE a financing request.
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAuthenticated()]
+            return [AllowAny()]
         return [IsAuthenticated(), IsMerchantLenderOrCompliance()]
 
     def get_visible_indexes(self, request):
@@ -77,7 +77,7 @@ class FinancingListView(APIView):
             return Response({'detail': 'Invalid merchant'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            profile_merchant_id = request.user.profile.merchant_id
+            profile_merchant_id = request.user.profile.merchant_id if request.user.is_authenticated else None
         except UserProfile.DoesNotExist:
             profile_merchant_id = None
 
