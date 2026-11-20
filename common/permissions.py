@@ -38,3 +38,48 @@ class IsLender(BasePermission):
             return user.profile.role == UserProfile.Role.LENDER
         except UserProfile.DoesNotExist:
             return False
+
+class IsCompliance(BasePermission):
+    """Permits access only to authenticated users with the compliance role."""
+
+    message = 'This endpoint is restricted to compliance accounts.'
+
+    def has_permission(self, request, view) -> bool:
+        user = request.user
+        if not user.is_authenticated:
+            return False
+        try:
+            return user.profile.role == UserProfile.Role.COMPLIANCE
+        except UserProfile.DoesNotExist:
+            return False
+
+
+class IsSupport(BasePermission):
+    """Permits access only to authenticated users with the support role."""
+
+    message = 'This endpoint is restricted to support accounts.'
+
+    def has_permission(self, request, view) -> bool:
+        user = request.user
+        if not user.is_authenticated:
+            return False
+        try:
+            return user.profile.role == UserProfile.Role.SUPPORT
+        except UserProfile.DoesNotExist:
+            return False
+        
+class IsMerchantLenderOrCompliance(BasePermission):
+    def has_permission(self, request, view) -> bool:
+        if not request.user.is_authenticated:
+            return False
+        if request.user.is_staff:
+            return True
+        try:
+            role = request.user.profile.role
+            return role in (
+                UserProfile.Role.MERCHANT,
+                UserProfile.Role.LENDER,
+                UserProfile.Role.COMPLIANCE,
+            )
+        except UserProfile.DoesNotExist:
+            return False

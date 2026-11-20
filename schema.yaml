@@ -4,34 +4,85 @@ info:
   version: 1.0.0
   description: Merchant onboarding and financing requests MVP.
 paths:
-  /api/financing/requests/:
-    get:
-      operationId: financing_requests_retrieve
+  /api-auth/login/:
+    post:
+      operationId: api_auth_login_create
       tags:
-      - financing
+      - api-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionLogin'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SessionLogin'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SessionLogin'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionLoginResponse'
+          description: ''
+  /api/auth/token/:
+    post:
+      operationId: api_auth_token_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+        required: true
       security:
       - tokenAuth: []
       - cookieAuth: []
-      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+          description: ''
+  /api/financing/requests/:
+    get:
+      operationId: api_financing_requests_retrieve
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
       responses:
         '200':
           description: No response body
     post:
-      operationId: financing_requests_create
+      operationId: api_financing_requests_create
       tags:
-      - financing
+      - api
       security:
       - tokenAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           description: No response body
   /api/merchants/:
     post:
-      operationId: merchants_create
+      operationId: api_merchants_create
       tags:
-      - merchants
+      - api
       security:
       - tokenAuth: []
       - cookieAuth: []
@@ -41,7 +92,7 @@ paths:
           description: No response body
   /api/merchants/{id}/:
     get:
-      operationId: merchants_retrieve
+      operationId: api_merchants_retrieve
       parameters:
       - in: path
         name: id
@@ -49,7 +100,7 @@ paths:
           type: integer
         required: true
       tags:
-      - merchants
+      - api
       security:
       - tokenAuth: []
       - cookieAuth: []
@@ -58,6 +109,43 @@ paths:
         '200':
           description: No response body
 components:
+  schemas:
+    AuthToken:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        token:
+          type: string
+          readOnly: true
+      required:
+      - password
+      - token
+      - username
+    SessionLogin:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+      - password
+      - username
+    SessionLoginResponse:
+      type: object
+      properties:
+        username:
+          type: string
+        is_staff:
+          type: boolean
+      required:
+      - is_staff
+      - username
   securitySchemes:
     cookieAuth:
       type: apiKey

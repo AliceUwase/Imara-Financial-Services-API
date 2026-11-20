@@ -1,18 +1,54 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
+from common.permissions import IsMerchant, IsLender, IsCompliance
+from common.models import UserProfile
+from common.models import AccessLog
+from common.audit import log_access
 from .models import FinancingRequest, FinancingIndex
 from merchants.models import MerchantIndex
+from common.permissions import IsMerchant, IsLender, IsCompliance, IsMerchantLenderOrCompliance
+    
+
+
 
 
 class FinancingListView(APIView):
-    permission_classes = [AllowAny]
+    # Different roles for different actions: the three roles may LIST,
+    # but only a merchant may CREATE a financing request.
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAuthenticated(), IsMerchant()]
+        return [IsAuthenticated(), IsMerchantLenderOrCompliance()]
+
+    def get_visible_indexes(self, request):
+        base = FinancingIndex.objects.select_related(
+            'financing_request',
+            'financing_request__merchant',
+            'financing_request__merchant__index',
+        )
+
+        try:
+            role = request.user.profile.role
+        except UserProfile.DoesNotExist:
+            # Staff users (is_staff=True) have no UserProfile — they see everything.
+            return base
+
+        # A merchant sees only requests belonging to their own merchant.
+        # If their profile has no merchant linked, this safely returns nothing.
+        if role == UserProfile.Role.MERCHANT:
+            return base.filter(
+                financing_request__merchant=request.user.profile.merchant
+            )
+
+        # Lenders and compliance review across all merchants.
+        return base
 
     def get(self, request):
         items = []
-        for idx in FinancingIndex.objects.select_related('financing_request').all():
+        for idx in self.get_visible_indexes(request):
             fr = idx.financing_request
             items.append({
                 'id': idx.id,
@@ -22,6 +58,14 @@ class FinancingListView(APIView):
                 'purpose': fr.purpose,
                 'status': fr.status,
             })
+            # We log only the index ids that were returned, never the contents.
+        log_access(
+            request,
+            action=AccessLog.Action.LIST_FINANCING,
+            record_ids=[item['id'] for item in items],
+            resource_type='financing_request',
+        )
+
         return Response(items)
 
     def post(self, request):
