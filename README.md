@@ -1,212 +1,348 @@
-# Imara Financial Services Assessment Shell
+# Imara Financial Services — MVP
 
-This repository is the starter shell for the `2793` Advanced Python assessment sequence. It is intentionally **not** a runnable Django project on day one. You will create your personal repository from GitHub Classroom once in `F1` and continue using that same repository through `F2` and the Summative.
+Imara is an MVP merchant onboarding and financing-request platform built
+for users on unstable mobile data. This repository contains the F1
+increment: a runnable Django REST API with merchant registration,
+financing request creation, a lender-facing feed, and an async alert
+flow.
 
-## What this repository provides
 
-- repo hygiene and workflow structure
-- the Imara assessment continuity model
-- documentation templates for assessed artifacts:
-  - `ADR.md`
-  - `DECISION_LOG.md`
-  - `BUG_REPORT.md`
-- a Pull Request template that supports grading, trade-off reasoning, and AI disclosure
-- a lightweight CI workflow for repo hygiene only
-- public autograding contracts that define the minimum objective checks for each stage
+- **Autograder root schema:** `schema.yaml` at the repository root 
 
-## What you must create yourself in F1
+---
 
-This is part of the learning design. In `F1`, you are expected to bootstrap the application yourself, including:
+## Prerequisites
 
-- the Django project itself
-- `manage.py`
-- the project configuration package
-- installed apps and URL routing
-- Django REST Framework setup
-- async worker wiring when you implement alerts
-- your initial models, serializers, views, and endpoints
+You will need the following installed before starting:
 
-## What this repository does not provide
+- **Python 3.11 or newer** (tested on 3.13)
+- **A Redis-compatible server** running on `localhost:6379`. On Windows
+  the easiest option is [Memurai](https://www.memurai.com/get-memurai)
+  (free Developer Edition); on macOS or Linux, install Redis through
+  your package manager. Docker is also fine: `docker run -d -p 6379:6379 redis:7-alpine`.
+- **Git** for cloning the repository.
 
-- a prebuilt Django project
-- working starter endpoints
-- ready-made app modules
-- hidden grading tests
-- pre-written assessed reasoning
-- a solved async or deployment setup
+---
 
-## Repository model for the full module
+## Local Setup
 
-You accept the GitHub Classroom invitation once in `F1`. After that:
+Run these commands in order, in a new terminal, from the directory
+where you cloned the repository.
 
-- you keep the same repository through all three assessments
-- `main` is the stable branch
-- you create a new working branch for each assessment
-- you submit the Pull Request URL in Canvas, not the repository URL
+### 1. Create and activate a virtual environment
 
-### Branch model
-
-| Assessment | Working branch | PR target |
-|---|---|---|
-| F1 | `f1/mvp` | `main` |
-| F2 | `f2/compliance-retrofit` | `main` |
-| Summative | `summative/release-hardening` | `main` |
-
-### Recommended student repository naming
-
-`advanced-python-imara-<github-username>`
-
-## Assessment journey
-
-### F1: MVP - Merchant API, Async Alerts, and Performance Foundations
-
-You will use this repo shell to build the first real application increment, including:
-
-- bootstrapping the Django project and configuration
-- merchant registration/profile API work
-- financing request creation
-- lender-facing request listing
-- validation and typed implementation
-- one async alert flow
-- one performance-minded feature such as pagination or caching
-- `ADR.md`
-
-### F2: Compliance Retrofit - Auth, RBAC, Privacy, and Auditability
-
-You continue from the same repository and add:
-
-- stronger authentication
-- RBAC and access boundaries
-- privacy and auditability controls
-- updated docs
-- `DECISION_LOG.md`
-
-### Summative: Release Hardening - Debug, Test, Deploy, and Defend
-
-You continue from the same repository and harden it through:
-
-- targeted bug fixing
-- stronger automated tests
-- deployment/runtime configuration
-- release-readiness documentation
-- `BUG_REPORT.md`
-
-## Local setup
-
-### 1. Clone your GitHub Classroom repository
+On Windows (Git Bash):
 
 ```bash
-git clone <your-classroom-repo-url>
-cd advanced-python-imara-<github-username>
+py -m venv .venv
+source .venv/Scripts/activate
 ```
 
-### 2. Create and activate a virtual environment
+On macOS or Linux:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Install dependencies
+You should see `(.venv)` at the start of your prompt.
+
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+### 3. Create your environment file
 
 ```bash
 cp .env.example .env
 ```
 
-Update values in `.env` as needed for your local setup.
+Open `.env` in an editor and confirm the default values are appropriate
+for your machine. See the [Environment Variables](#environment-variables)
+section below for what each variable controls.
 
-### 5. Bootstrap your Django project and apps
+### 4. Apply database migrations
 
-You are expected to create the Django project and the initial application structure yourself during `F1`.
+```bash
+py manage.py migrate
+```
 
-### 6. Install and configure the project components you choose
+This creates a SQLite database file (`db.sqlite3`) with all the
+required tables.
 
-At minimum, your implementation should introduce:
+### 5. Create a superuser for the Django admin
 
-- a Django project package
-- `manage.py`
-- DRF-enabled API configuration
-- at least the app boundaries needed for your chosen solution
-- routing and settings that allow the system to run
+```bash
+py manage.py createsuperuser
+```
 
-### 7. Run the application and worker you build
+Pick any username, email, and password. You will use this to log in to
+The admin at `/admin/` for inspecting data.
 
-Once your project exists, document your own run commands in the README.
+### 6. Create test users for API access
 
-## Environment variables
+The API uses token authentication with two roles (merchant and lender).
+Create one user of each role through the Django shell:
 
-| Variable | Required | Purpose |
+```bash
+py manage.py shell
+```
+
+Then inside the shell:
+
+```python
+from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
+from common.models import UserProfile
+
+merchant_user = User.objects.create_user(username='merchant1', password='testpass123', email='merchant1@test.com')
+UserProfile.objects.create(user=merchant_user, role='merchant')
+merchant_token = Token.objects.create(user=merchant_user)
+print(f'Merchant token: {merchant_token.key}')
+
+lender_user = User.objects.create_user(username='lender1', password='testpass123', email='lender1@test.com')
+UserProfile.objects.create(user=lender_user, role='lender')
+lender_token = Token.objects.create(user=lender_user)
+print(f'Lender token: {lender_token.key}')
+
+exit()
+```
+
+Save both tokens — you will use them in the example requests below.
+
+### 7. Start the Django development server
+
+```bash
+py manage.py runserver
+```
+
+The API is now reachable at `http://127.0.0.1:8000/`. Visit
+`http://127.0.0.1:8000/api/schema/swagger-ui/` for interactive API
+documentation.
+
+---
+
+## Environment Variables
+
+The application reads configuration from a `.env` file at the project
+root using `python-decouple`. A template is provided in `.env.example`;
+copy it to `.env` before running.
+
+| Variable | Default | Purpose |
 |---|---|---|
-| `SECRET_KEY` | Yes | Django application secret |
-| `DEBUG` | Yes | Local debug mode |
-| `ALLOWED_HOSTS` | Yes | Comma-separated allowed hosts |
-| `CELERY_BROKER_URL` | No | Queue broker connection for async alerts |
-| `CELERY_RESULT_BACKEND` | No | Async task result backend |
+| `SECRET_KEY` | `change-me` | Django's cryptographic key. Set to a unique random value in production. |
+| `DEBUG` | `True` | Enables Django's debug mode. Must be `False` in production. |
+| `ALLOWED_HOSTS` | `127.0.0.1,localhost` | Comma-separated list of hostnames the server will accept. |
+| `CELERY_BROKER_URL` | `redis://localhost:6379/0` | Where Celery queues tasks. Must match your Redis instance. |
+| `CELERY_RESULT_BACKEND` | `redis://localhost:6379/0` | Where Celery stores task results. |
 
-## Minimum repo shape by the end of F1
+`.env` is gitignored. Never commit real secrets to the repository;
+`.env.example` documents the structure without leaking values.
 
-By the end of `F1`, a grader should be able to see a repository that now contains:
+---
 
-- a Django project created by you
-- application modules that support your API design
-- environment setup instructions in the README
-- `ADR.md`
-- API code and documentation or schema evidence
-- evidence of async alert handling
-- one performance-minded improvement
+## Running the Async Worker
 
-## Assessed artifact locations
+Financing request creation and updates dispatch a background alert via
+Celery. The Django web process does not block on alert delivery, the
+API returns immediately and the worker processes the alert
+asynchronously.
 
-Place these in the repository root when each stage requires them:
+### 1. Confirm Redis is running
 
-- `ADR.md`
-- `DECISION_LOG.md`
-- `BUG_REPORT.md`
+```bash
+py -c "import redis; r = redis.Redis(); print(r.ping())"
+```
 
-Use the templates in `docs/templates/` as starting points. Replace the prompts with your own decisions and evidence.
+You should see `True`. If you see `ConnectionRefusedError`, your Redis
+server is not running.  Check [Prerequisites](#prerequisites).
 
-## Autograding contract
+### 2. Start the Celery worker (in a separate terminal)
 
-GitHub Classroom autograding checks only the minimum objective baseline for each stage. Read these before you start work:
+Activate the virtual environment in the new terminal, then:
 
-- [Runtime Contract](docs/autograding/RUN_CONTRACT.md)
-- [F1 Contract](docs/autograding/F1_CONTRACT.md)
-- [F2 Contract](docs/autograding/F2_CONTRACT.md)
-- [Summative Contract](docs/autograding/SUMMATIVE_CONTRACT.md)
+```bash
+celery -A imara worker --loglevel=info --pool=solo
+```
 
-These contracts do not tell you how to design the project. They define the minimum public interface the hidden checks rely on.
+The `--pool=solo` flag is required on Windows. On macOS or Linux you
+can omit it to use Celery's default pool.
 
-## Pull Request workflow
+The worker prints a banner listing registered tasks. Confirm that
+`financing.tasks.send_financing_alert` appears under the `[tasks]`
+section.
 
-For every assessment:
+### 3. Verify the async flow end-to-end
 
-1. Branch from the current `main`.
-2. Complete the work for that stage.
-3. Open a Pull Request back into `main`.
-4. Submit the Pull Request URL in Canvas.
+With the Django server running, the worker running, and Redis up,
+create a financing request via the API (see
+[Example Requests](#example-requests) below). The API should respond
+within milliseconds. The worker terminal should log an `ALERT [created]:`
+line shortly after, and a corresponding `AlertAttempt` row should
+appear in the Django admin under **Financing → Alert attempts**.
 
-## AI-use disclosure expectations
+---
 
-Limited AI support is allowed only within course rules. If you use AI, disclose it clearly in your PR and README annex:
+## Example Requests
 
-- what tool you used
-- what you asked it to help with
-- what you changed before accepting the output
-- what you can explain independently
+All examples assume the Django server is running at `http://127.0.0.1:8000/`.
+The project exposes the F1-facing API on unversioned `/api/` paths so
+that the autograder can reach them directly. Replace `MERCHANT_TOKEN`,
+`LENDER_TOKEN`, and any `MERCHANT_ID` with values from your setup. Token
+authentication uses the header `Authorization: Token <key>` (note the
+literal word `Token`).
 
-Do not submit code or reasoning you cannot defend in the technical defense process.
+### Register a new merchant
 
-## Integrity and continuity signals
+`POST /api/merchants/` is open to unauthenticated callers (registration
+must work before a token exists). The F1 autograder expects this
+endpoint to return a small integer `id` that maps to the created
+merchant (see Index models below).
 
-This repo structure is also part of the authorship and integrity model. Over time, graders should be able to see:
+```bash
+curl -X POST http://127.0.0.1:8000/api/merchants/ \
+  -H "Content-Type: application/json" \
+  -d '{"business_name":"Sunrise Bakery","owner_name":"Jane Doe","email":"jane@sunrise.com","phone":"+250788123456","country":"Rwanda"}'
+```
 
-- commit history that grows across the trimester
-- earlier artifacts still present and improved
-- trade-off reasoning that evolves with the codebase
-- PR discussion and evidence tied to each assessment stage
+Expected response: `201 Created` with a JSON body containing a small
+integer id, for example:
+
+```json
+{ "id": 1 }
+```
+
+Notes:
+- Merchant creation is idempotent by `email`: if the email already
+  exists the view returns `201` with the existing integer id rather
+  than failing with a 400/IntegrityError. This supports repeatable
+  autograder runs.
+- Internally merchants use UUID primary keys; the integer `id` is
+  provided by a separate `MerchantIndex` model that maps to the UUID.
+
+### Retrieve a merchant profile
+
+```bash
+curl http://127.0.0.1:8000/api/merchants/1/ \
+  -H "Authorization: Token MERCHANT_TOKEN"
+```
+
+Expected response: `200 OK` with the merchant's public record. The
+response includes the `contact_email` and other public fields; the
+internal UUID is not required by the autograder.
+
+### Submit a financing request
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/financing/requests/ \
+  -H "Authorization: Token MERCHANT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"merchant":1,"amount":"5000.00","currency":"USD","purpose":"Inventory restocking for the upcoming quarter"}'
+```
+
+Expected response: `201 Created` with a JSON body containing the new
+integer `id` for the financing request, for example:
+
+```json
+{ "id": 1 }
+```
+
+An `AlertAttempt` should appear in the Django admin shortly after if
+the Celery worker and Redis are running.
+
+### List submitted financing requests as a lender
+
+```bash
+curl http://127.0.0.1:8000/api/lender/financing-requests/ \
+  -H "Authorization: Token LENDER_TOKEN"
+```
+
+Expected response: `200 OK` with a paginated payload:
+
+```json
+{
+  "next": "http://127.0.0.1:8000/api/lender/financing-requests/?cursor=...",
+  "previous": null,
+  "results": [
+    { "id": 1, "amount": "5000.00", "currency": "USD", "status": "submitted", ... }
+  ]
+}
+```
+
+Default page size is 10. Override with `?page_size=N` up to a maximum of
+50.
+
+### Verify a validation error
+
+Use the integer merchant id when testing validation errors against the
+F1-facing endpoint:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/financing/requests/ \
+  -H "Authorization: Token MERCHANT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"merchant":1,"amount":"-100","currency":"USD","purpose":"Should fail"}'
+```
+
+Expected response: `400 Bad Request` in the consistent error envelope:
+
+```json
+{
+  "error": {
+    "code": "ValidationError",
+    "message": "Amount must be greater than zero.",
+    "details": {"amount": ["Amount must be greater than zero."]}
+  }
+}
+```
+
+---
+
+## API Documentation
+
+The API was documented using the OpenAPI 3 standard. Three views of the schema are
+available:
+
+- **Static schema file (human-readable):** [`schema.yaml`](./schema.yaml) —
+  versioned in this repository for review and documentation.
+- **Autograder schema (root):** [`schema.yaml`](./schema.yaml) — the F1
+  autograder expects a schema at the repository root. Regenerate with
+  `py manage.py spectacular --file schema.yaml` (see below).
+- **Interactive Swagger UI:** `http://127.0.0.1:8000/api/schema/swagger-ui/`
+  when the server is running.
+- **ReDoc rendering:** `http://127.0.0.1:8000/api/schema/redoc/` when
+  the server is running.
+
+The schema is auto-generated by `drf-spectacular` from the DRF view and
+serializer definitions, so it stays in sync with the code by construction.
+
+---
+
+## Project Structure
+
+```text
+advanced-python-imara-AliceUwase/
+├── imara/                  # Project configuration (settings, urls, celery)
+├── merchants/              # Merchant onboarding domain
+├── financing/              # Financing requests and async alerts
+├── common/                 # Shared infrastructure (permissions, exception handler, pagination, UserProfile)
+├── docs/                   # ADR template
+├── .env.example            # Environment variable template
+├── manage.py               # Django entry point
+├── requirements.txt        # Python dependencies
+├── README.md               # This file
+└── ADR.md, schema.yaml     # The rationale behind the bounded-app structure 
+```
+
+## Troubleshooting
+ **`ConnectionRefusedError` when starting the Celery worker.** Redis is not running. Confirm with the ping check in the [Running the Async Worker](#running-the-async-worker) section. 
+
+ **`OperationalError: table ... has no column named ...`.** Migrations have not been applied after a model change. Run `py manage.py makemigrations` and `py manage.py migrate`. 
+
+ **Celery worker on Windows hangs or fails to pick up tasks.** The `--pool=solo` flag is mandatory on Windows. The default pool relies on `fork()`, which Windows does not support. 
+
+ **`PermissionDenied: This endpoint is restricted to merchant accounts.`** The token in your `Authorization` header belongs to a user without the merchant role. Either use a different token or update the user's `UserProfile.role` through the Django admin.
+
+ --- 
