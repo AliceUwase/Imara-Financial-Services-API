@@ -13,4 +13,3 @@ htmlcov/
 *.pyd
 coverage.xml
 
-.env
