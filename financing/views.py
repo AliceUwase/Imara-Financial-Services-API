@@ -1,9 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from common.permissions import IsMerchant, IsMerchantLenderOrCompliance
 from rest_framework import status
 
-from common.permissions import IsMerchantLenderOrCompliance
+from common.permissions import IsMerchant, IsMerchantLenderOrCompliance
 from common.models import UserProfile, AccessLog
 from common.audit import log_access
 from .models import FinancingRequest, FinancingIndex
@@ -18,7 +18,7 @@ class FinancingListView(APIView):
     # but only a merchant may CREATE a financing request.
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [AllowAny()]
+            return [IsAuthenticated(), IsMerchant()]
         return [IsAuthenticated(), IsMerchantLenderOrCompliance()]
 
     def get_visible_indexes(self, request):
@@ -31,7 +31,9 @@ class FinancingListView(APIView):
         try:
             role = request.user.profile.role
         except UserProfile.DoesNotExist:
+            # Staff users (is_staff=True) have no UserProfile — they see everything.
             return base
+    
 
         # A merchant sees only requests belonging to their own merchant.
         # If their profile has no merchant linked, this safely returns nothing.
@@ -97,14 +99,14 @@ class FinancingListView(APIView):
         serializer.is_valid(raise_exception=True)
         from django.db import transaction
         with transaction.atomic():
-            fr = serializer.save()
             idx = FinancingIndex.objects.create(financing_request=fr)
             log_access(
-            request,
-            action=AccessLog.Action.CREATE_FINANCING,
-            record_ids=[idx.id],
-            resource_type='financing_request',
-        )
+                    request,
+                    action=AccessLog.Action.CREATE_FINANCING,
+                    record_ids=[idx.id],
+                    resource_type='financing_request',
+            )
+            
             
             return Response({'id': idx.id}, status=status.HTTP_201_CREATED)
 
